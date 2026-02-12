@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>归元 · Energy Focus</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #FAFAFA;
+            --bg-card: #FFFFFF;
+            --text-main: #1F2937;
+            --text-sub: #4B5563;
+            
+            --c-visual: #D97706; --bg-visual: #FFFBEB;
+            --c-yang:   #059669; --bg-yang:  #ECFDF5;
+            --c-fire:   #E11D48; --bg-fire:  #FFF1F2;
+            --c-love:   #7C3AED; --bg-love:  #F5F3FF;
+            --c-flow:   #2563EB; --bg-flow:  #EFF6FF;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: var(--bg-body);
+            margin: 0; padding: 20px; padding-bottom: 60px;
+            color: var(--text-main);
+            max-width: 600px; margin: 0 auto;
+        }
+
+        header { text-align: center; margin-bottom: 30px; margin-top: 10px; }
+        .brand { font-size: 1.6rem; font-weight: 800; color: #111; letter-spacing: -0.5px; display: block; margin-bottom: 5px; }
+        .slogan { font-size: 0.8rem; color: #9CA3AF; letter-spacing: 4px; text-transform: uppercase; }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            margin-bottom: 20px;
+            position: relative;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+        .control-card { z-index: 50; }
+
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #F3F4F6;
+        }
+        .title-row { display: flex; align-items: center; font-size: 1rem; font-weight: 700; color: #374151; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #9CA3AF; margin-right: 10px; }
+        
+        /* 黑色重置按钮 */
+        .reset-btn { 
+            color: #1F2937; 
+            font-size: 0.9rem; 
+            font-weight: 600;
+            background: none; border: none; cursor: pointer; opacity: 0.8;
+        }
+        .reset-btn:active { opacity: 0.5; }
+
+        /* 时辰行 */
+        .phase-row {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #F9FAFB; padding: 12px 16px; border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        .label-text { font-size: 0.95rem; color: #6B7280; font-weight: 500; }
+        .select-trigger { font-size: 0.95rem; font-weight: 600; color: #2563EB; display: flex; align-items: center; cursor: pointer; }
+        .arrow {
+            width: 0; height: 0; 
+            border-left: 5px solid transparent; border-right: 5px solid transparent;
+            border-top: 6px solid #2563EB; margin-left: 8px; transition: transform 0.2s;
+        }
+        .select-trigger.active .arrow { transform: rotate(180deg); }
+        
+        .select-options {
+            position: absolute; top: 45px; right: 0; width: 220px;
+            background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            z-index: 100; display: none; overflow: hidden; border: 1px solid #eee;
+        }
+        .select-options.show { display: block; animation: fadeIn 0.2s; }
+        
+        /* 下拉菜单光标跟随效果 */
+        .option-item { 
+            padding: 12px 16px; text-align: center; font-size: 0.9rem; 
+            border-bottom: 1px solid #f9f9f9; cursor: pointer; color: #444; 
+            transition: background 0.1s;
+        }
+        .option-item:hover, .option-item:active { 
+            background: #F3F4F6; color: #2563EB; font-weight: 600;
+        }
+        @keyframes fadeIn { from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+
+        /* 按钮组自动缩放 */
+        .action-container {
+            display: flex;
+            justify-content: space-between; 
+            gap: 8px; 
+            width: 100%;
+        }
+
+        .btn-action {
+            flex: 1; 
+            min-width: 0; 
+            aspect-ratio: 1 / 1; 
+            
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 18px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform 0.1s, border-color 0.2s;
+            overflow: hidden; 
+        }
+
+        .btn-icon { 
+            font-size: 1.8rem; 
+            margin-bottom: 5px; 
+            filter: none; opacity: 1; 
+        }
+        .btn-text { 
+            font-size: 0.75rem; 
+            font-weight: 700; 
+            color: #374151; 
+            transition: color 0.2s; 
+            white-space: nowrap; 
+        }
+
+        @media (max-width: 360px) {
+            .btn-icon { font-size: 1.5rem; }
+            .btn-text { font-size: 0.65rem; }
+        }
+
+        .btn-action:active { transform: scale(0.96); border-width: 2px; }
+        .type-visual:active { border-color: var(--c-visual); background: #FFFCF5; }
+        .type-visual:active .btn-text { color: var(--c-visual); }
+        .type-yang:active { border-color: var(--c-yang); background: #F2FFFA; }
+        .type-yang:active .btn-text { color: var(--c-yang); }
+        .type-fire:active { border-color: var(--c-fire); background: #FFF5F5; }
+        .type-fire:active .btn-text { color: var(--c-fire); }
+        .type-love:active { border-color: var(--c-love); background: #FAF5FF; }
+        .type-love:active .btn-text { color: var(--c-love); }
+        .type-flow:active { border-color: var(--c-flow); background: #F0F7FF; }
+        .type-flow:active .btn-text { color: var(--c-flow); }
+
+        .stats-row { display: flex; align-items: center; padding: 10px 0; justify-content: space-around; }
+        .stat-block { text-align: center; flex: 1; }
+        .stat-divider { width: 1px; height: 50px; background: #E5E7EB; }
+        .stat-value { font-size: 2rem; font-weight: 800; display: block; line-height: 1.1; margin-bottom: 4px; }
+        .stat-key { font-size: 0.8rem; color: #9CA3AF; }
+
+        #tipBox {
+            margin-top: 25px; background: #FFFBEB; border: 1px solid #FEF3C7;
+            padding: 16px; border-radius: 12px; display: none; animation: fadeIn 0.3s ease;
+        }
+        .tip-quote { font-weight: 700; color: #444; margin-bottom: 5px; font-size: 0.95rem; }
+        .tip-context { font-size: 0.85rem; color: #666; line-height: 1.5; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,0.1); }
+
+        .card-footer { 
+            margin-top: 15px; 
+            display: flex; justify-content: flex-end; align-items: center;
+        }
+        
+        .chart-box { width: 100%; height: 260px; }
+        
+        .log-list { max-height: 350px; overflow-y: auto; }
+        .log-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #F3F4F6; }
+        .log-left { display: flex; flex-direction: column; }
+        .log-top { display: flex; align-items: center; margin-bottom: 4px; }
+        .log-tag { background: #F3F4F6; color: #6B7280; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; margin-right: 8px; }
+        .log-type { font-size: 1rem; font-weight: 600; color: #374151; }
+        .log-time { font-size: 0.8rem; color: #9CA3AF; }
+        .log-score { font-size: 1.2rem; font-weight: 700; }
+        .score-green { color: var(--c-yang); } .score-red { color: var(--c-fire); }
+        #mask { position: fixed; top:0; left:0; width:100%; height:100%; z-index: 40; display: none; }
+    </style>
+</head>
+<body>
+
+<div id="mask" onclick="closeMenus()"></div>
+
+<header>
+    <span class="brand">归元 · Energy Focus</span>
+    <span class="slogan">收摄心神 · 积蓄能量</span>
+</header>
+
+<div class="card control-card">
+    <div class="card-header">
+        <div class="title-row"><div class="dot"></div>状态记录</div>
+        <button class="reset-btn" onclick="resetData()">重置</button>
+    </div>
+
+    <div class="phase-row">
+        <span class="label-text">当前时辰</span>
+        <div style="position: relative;">
+            <div class="select-trigger" id="phaseTrigger" onclick="togglePhaseMenu()">
+                <span id="currentPhaseText">晨醒 (03:00 - 07:00)</span>
+                <div class="arrow"></div>
+            </div>
+            <div class="select-options" id="phaseMenu" style="width: 200px;"></div>
+        </div>
+    </div>
+
+    <div class="action-container">
+        <div class="btn-action type-visual" onclick="addLog('视觉干扰', -2)">
+            <span class="btn-icon">👁️</span><span class="btn-text">视觉干扰</span>
+        </div>
+        <div class="btn-action type-yang" onclick="addLog('阳气生发', 1)">
+            <span class="btn-icon">🌱</span><span class="btn-text">阳气生发</span>
+        </div>
+        <div class="btn-action type-fire" onclick="addLog('能量释放', -5)">
+            <span class="btn-icon">🔥</span><span class="btn-text">能量释放</span>
+        </div>
+        <div class="btn-action type-love" onclick="addLog('阴阳调和', -4)">
+            <span class="btn-icon">☯️</span><span class="btn-text">阴阳调和</span>
+        </div>
+        <div class="btn-action type-flow" onclick="addLog('自然满溢', -3)">
+            <span class="btn-icon">🌊</span><span class="btn-text">自然满溢</span>
+        </div>
+    </div>
+
+    <div id="tipBox"></div>
+
+    <div class="card-footer">
+        <div style="position: relative; display: inline-block;">
+            <div class="select-trigger" onclick="toggleRangeMenu()" style="font-size: 0.85rem; color:#6B7280;">
+                <span id="currentRangeText">近 30 天</span> <div class="arrow" style="border-top-color:#6B7280"></div>
+            </div>
+            <div class="select-options" id="rangeMenu" style="width: 120px;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="title-row"><div class="dot" style="background:#30D158"></div>能量概览</div>
+    </div>
+    <div class="stats-row">
+        <div class="stat-block">
+            <span class="stat-value" style="color:#2563EB" id="scoreVal">100.0</span>
+            <span class="stat-key">当前能量值</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-block">
+            <span class="stat-value" style="color:#111" id="countVal">0</span>
+            <span class="stat-key">周期记录数</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="title-row"><div class="dot" style="background:#2563EB"></div>能量趋势</div>
+    </div>
+    <div id="trendChart" class="chart-box"></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="title-row"><div class="dot" style="background:#E11D48"></div>时律分布</div>
+    </div>
+    <div id="radarChart" class="chart-box"></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="title-row"><div class="dot" style="background:#eee"></div>详细日志</div>
+    </div>
+    <div class="log-list" id="logList"></div>
+</div>
+
+<script>
+    const phases = [
+        {val: "晨醒·生发", text: "晨醒 (03:00 - 07:00)"},
+        {val: "旺盛·活力", text: "旺盛 (07:00 - 11:00)"},
+        {val: "运化·轮转", text: "运化 (11:00 - 15:00)"},
+        {val: "归纳·收摄", text: "归纳 (15:00 - 19:00)"},
+        {val: "安神·宁静", text: "安神 (19:00 - 23:00)"},
+        {val: "深眠·潜藏", text: "深眠 (23:00 - 03:00)"}
+    ];
+    // 更新点：增加了“近半年”
+    const ranges = [
+        {val: 7, text: "近 7 天"},
+        {val: 15, text: "近 15 天"},
+        {val: 30, text: "近 30 天"},
+        {val: 90, text: "近 90 天"},
+        {val: 180, text: "近 半年"},
+        {val: 365, text: "近 一年"}
+    ];
+    const quoteLibrary = {
+        '视觉干扰': {q: "五色令人目盲。", s: "道德经", c: "警示：过度的感官刺激会直接导致心神散乱。请立刻远离屏幕，闭目养神3分钟。"},
+        '阳气生发': {q: "天行健，君子以自强不息。", s: "周易", c: "解读：身体的生机恢复，就像天道运行一样自然。请顺应这股能量，转化为奋斗的动力。"},
+        '能量释放': {q: "逆于生乐，务快其心。", s: "黄帝内经", c: "警告：只追求一时快感是透支生命。这并非“放松”，而是损耗。既已发生，此刻必须静养。"},
+        '阴阳调和': {q: "乐而不淫，哀而不伤。", s: "论语", c: "解读：快乐要有节制。适度温存有益身心，不可过度贪欢。"},
+        '自然满溢': {q: "精满则溢，月满则亏。", s: "景岳全书", c: "解读：这是自然的代谢规律。只要白天心无邪念，无需介怀。"}
+    };
+
+    let currentPhaseIdx = 0;
+    let currentRangeIdx = 2; // 默认30天
+    let logs = JSON.parse(localStorage.getItem('energy_logs_final_v7')) || [];
+    let trendChart, radarChart;
+
+    window.onload = function() {
+        initTime();
+        initMenus();
+        renderUI();
+        initCharts();
+        updateCharts();
+    };
+
+    function initTime() {
+        const h = new Date().getHours();
+        currentPhaseIdx = (h>=23||h<3)?5:(h<7)?0:(h<11)?1:(h<15)?2:(h<19)?3:4;
+        updatePhaseText();
+    }
+
+    function initMenus() {
+        const pMenu = document.getElementById('phaseMenu');
+        phases.forEach((p, idx) => {
+            let div = document.createElement('div');
+            div.className = 'option-item';
+            div.innerText = p.text;
+            div.onclick = () => { currentPhaseIdx = idx; updatePhaseText(); closeMenus(); };
+            pMenu.appendChild(div);
+        });
+        
+        const rMenu = document.getElementById('rangeMenu');
+        ranges.forEach((r, idx) => {
+            let div = document.createElement('div');
+            div.className = 'option-item';
+            div.innerText = r.text;
+            div.onclick = () => { 
+                currentRangeIdx = idx; 
+                document.getElementById('currentRangeText').innerText = r.text; 
+                closeMenus(); updateCharts(); renderUI();
+            };
+            rMenu.appendChild(div);
+        });
+    }
+
+    function addLog(type, score) {
+        const now = new Date();
+        const log = {
+            id: Date.now(), type, score, 
+            phaseName: phases[currentPhaseIdx].val.split('·')[0],
+            ts: now.getTime(),
+            date: (now.getMonth()+1)+'/'+now.getDate(),
+            timeStr: now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')
+        };
+        logs.unshift(log);
+        localStorage.setItem('energy_logs_final_v7', JSON.stringify(logs));
+        
+        const q = quoteLibrary[type];
+        if(q) {
+            document.getElementById('tipBox').innerHTML = 
+                `<div class="tip-quote">“${q.q}” —— ${q.s}</div><div class="tip-context">${q.c}</div>`;
+            document.getElementById('tipBox').style.display = 'block';
+        }
+
+        renderUI();
+        updateCharts();
+    }
+
+    function renderUI() {
+        const days = ranges[currentRangeIdx].val;
+        const cutoff = Date.now() - days * 86400000;
+        const validLogs = logs.filter(l => l.ts > cutoff);
+
+        let score = 100;
+        [...validLogs].reverse().forEach(l => {
+            score += l.score + 0.2;
+            if(score > 120) score = 120;
+            if(score < 0) score = 0;
+        });
+
+        document.getElementById('scoreVal').innerText = score.toFixed(1);
+        document.getElementById('countVal').innerText = validLogs.length;
+
+        const list = document.getElementById('logList');
+        if(logs.length === 0) {
+            list.innerHTML = '<div style="text-align:center;padding:20px;color:#999;font-size:0.8rem">暂无记录</div>';
+        } else {
+            list.innerHTML = logs.map(l => `
+                <div class="log-item">
+                    <div class="log-left">
+                        <div class="log-top">
+                            <span class="log-tag">${l.phaseName}</span>
+                            <span class="log-type">${l.type}</span>
+                        </div>
+                        <span class="log-time">${l.date} ${l.timeStr}</span>
+                    </div>
+                    <span class="log-score ${l.score>0?'score-green':'score-red'}">${l.score>0?'+':''}${l.score}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    function togglePhaseMenu() { 
+        document.getElementById('mask').style.display = 'block';
+        document.getElementById('phaseMenu').classList.add('show');
+        document.getElementById('phaseTrigger').classList.add('active');
+    }
+    function toggleRangeMenu() {
+        document.getElementById('mask').style.display = 'block';
+        document.getElementById('rangeMenu').classList.add('show');
+    }
+    function closeMenus() {
+        document.getElementById('mask').style.display = 'none';
+        document.querySelectorAll('.select-options').forEach(el => el.classList.remove('show'));
+        document.getElementById('phaseTrigger').classList.remove('active');
+    }
+    function updatePhaseText() {
+        document.getElementById('currentPhaseText').innerText = phases[currentPhaseIdx].text;
+    }
+    function resetData() {
+        if(confirm('确定重置所有数据吗？')) {
+            logs = [];
+            localStorage.removeItem('energy_logs_final_v7');
+            renderUI(); updateCharts();
+            document.getElementById('tipBox').style.display = 'none';
+        }
+    }
+
+    function initCharts() {
+        trendChart = echarts.init(document.getElementById('trendChart'));
+        radarChart = echarts.init(document.getElementById('radarChart'));
+        window.onresize = () => { trendChart.resize(); radarChart.resize(); };
+    }
+
+    function updateCharts() {
+        const days = ranges[currentRangeIdx].val;
+        const cutoff = Date.now() - days * 86400000;
+        const validLogs = logs.filter(l => l.ts > cutoff);
+
+        let score = 100;
+        let dates = [], values = [];
+        [...validLogs].reverse().forEach(l => {
+            score += l.score + 0.2;
+            if(score > 120) score = 120;
+            if(score < 0) score = 0;
+            dates.push(l.date);
+            values.push(score.toFixed(1));
+        });
+
+        trendChart.setOption({
+            grid: {left:'2%', right:'5%', top:'10%', bottom:'0%', containLabel:true},
+            tooltip: {trigger:'axis'},
+            xAxis: {type:'category', data:dates, axisLine:{show:false}, axisTick:{show:false}, axisLabel:{color:'#9CA3AF'}},
+            yAxis: {type:'value', splitLine:{lineStyle:{type:'dashed', color:'#F3F4F6'}}, axisLabel:{color:'#9CA3AF'}},
+            series: [{
+                data: values, type:'line', smooth:true, showSymbol:false,
+                itemStyle:{color:'#2563EB'},
+                areaStyle:{color: new echarts.graphic.LinearGradient(0,0,0,1, [{offset:0, color:'rgba(37,99,235,0.1)'}, {offset:1, color:'rgba(37,99,235,0)'}])}
+            }]
+        });
+
+        const pNames = ["晨醒", "旺盛", "运化", "归纳", "安神", "深眠"];
+        let counts = [0,0,0,0,0,0];
+        validLogs.forEach(l => {
+            if(l.score < 0) {
+                let i = pNames.indexOf(l.phaseName);
+                if(i > -1) counts[i]++;
+            }
+        });
+
+        radarChart.setOption({
+            radar: {
+                indicator: pNames.map(n=>({name:n, max:Math.max(...counts)+2})),
+                radius: '65%', axisName:{color:'#4B5563', fontWeight:'600'}
+            },
+            series: [{
+                type:'radar', data:[{value:counts}],
+                itemStyle:{color:'#E11D48'},
+                areaStyle:{color:'rgba(225,29,72,0.2)'}
+            }]
+        });
+    }
+</script>
+
+</body>
+</html>
